@@ -3,3 +3,4 @@ gemspec
 gem 'bacon'
 gem 'rack-cerberus'
 
+gem 'activerecord'
