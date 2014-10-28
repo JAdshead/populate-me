@@ -1,23 +1,29 @@
 $:.unshift File.expand_path('../../lib', __FILE__)
-# require 'populate_me'
+require 'populate_me'
+require 'populate_me/active_record_proxy'
 
 # Models ##########
 
-require 'populate_me/document'
-class BlogPost
-  include PopulateMe::Document
-  field :title
-  field :content, type: :text
-  # field :authors, type: :list
-  field :published, type: :boolean
-  def validate
-    # error_on(:content,'Cannot be blank') if PopulateMe::Utils.blank?(self.content)
-  end
+class BlogPost < ActiveRecord 
+  include PopulateMe::ActiveRecordProxy
+
 end
-class BlogPost::Author
-  include PopulateMe::Document
-  field :name
-end
+
+# require 'populate_me/document'
+# class BlogPost
+#   include PopulateMe::Document
+#   field :title
+#   field :content, type: :text
+#   # field :authors, type: :list
+#   field :published, type: :boolean
+#   def validate
+#     # error_on(:content,'Cannot be blank') if PopulateMe::Utils.blank?(self.content)
+#   end
+# end
+# class BlogPost::Author
+#   include PopulateMe::Document
+#   field :name
+# end
 
 # Admin ##########
 
