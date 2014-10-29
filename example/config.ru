@@ -1,13 +1,26 @@
 $:.unshift File.expand_path('../../lib', __FILE__)
 require 'populate_me'
-require 'populate_me/active_record_proxy'
+
 
 # Models ##########
 
-class BlogPost < ActiveRecord 
+require 'pg'
+require 'active_record'
+require 'populate_me/active_record_proxy'
+
+ActiveRecord::Base.establish_connection(
+  :adapter => 'postgresql',
+  :host => "localhost", 
+  :database => 'populate_me_test'
+)
+
+
+class BlogPost < ActiveRecord::Base
   include PopulateMe::ActiveRecordProxy
 
+  
 end
+
 
 # require 'populate_me/document'
 # class BlogPost
@@ -31,7 +44,7 @@ require "populate_me/admin"
 class Admin < PopulateMe::Admin
   enable :sessions
   set :menu, [ 
-    ['Blog Posts', '/list/blog-post'],
+    ['Blog Posts', '/list/blog-post--proxy'],
   ]
 end
 
