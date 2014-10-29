@@ -11,22 +11,16 @@ module PopulateMe
 
         attr_accessor :target
 
-        def initialize(*args)
-           #@target = self::Target.new(*args)
-        end
-
-        def self.wrap active_record_object
-          proxy = self.new
-          proxy.target = active_record_object
-          proxy
+        def initialize active_record_object=nil
+          self.target = active_record_object || self.class::Target.new
         end
 
         def self.[] id
-          wrap self::Target.find(id)
+          self.new self::Target.find(id)
         end
 
         def to_s
-          @target.to_s
+          @target.attributes.detect { |k,v| k.to_s != "id"}[1]
         end
 
         def self.to_s
@@ -36,7 +30,11 @@ module PopulateMe
         def self.to_s_plural; "#{self.to_s}s"; end
 
         def self.all 
-          self::Target.all.map { |obj| wrap obj }
+          self::Target.all.map { |obj| self.new obj }
+        end
+
+        def new?
+          @target.new_record?
         end
 
 
@@ -108,9 +106,9 @@ module PopulateMe
           end
           {
             template: "template#{'_embeded' if o[:embeded]}_form",
-            page_title: @target.new_record? ? "New #{self::Target}" : @target.to_s,
+            page_title: self.new? ? "New #{self.class.name}" : self.to_s,
             admin_url: self.to_admin_url,
-            is_new: @target.new_record?,
+            is_new: self.new?,
             fields: items
           }
         end
