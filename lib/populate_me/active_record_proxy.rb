@@ -77,8 +77,8 @@ module PopulateMe
               value: self.class.name
             }
           }]
-          if self.class.respond_to? :fields
-            self.class.fields.each do |k,v|
+          if self.class.respond_to? :columns_hash
+            self.class.columns_hash.each do |k,v|
               unless v[:form_field]==false
                 settings = v.dup
                 settings[:field_name] = k
