@@ -17,8 +17,10 @@ ActiveRecord::Base.establish_connection(
 
 class BlogPost < ActiveRecord::Base
   include PopulateMe::ActiveRecordProxy
-
+  
 end
+
+
 
 
 # require 'populate_me/document'

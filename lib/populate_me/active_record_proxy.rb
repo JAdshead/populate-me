@@ -9,7 +9,9 @@ module PopulateMe
 
       base.const_set :Proxy, Class.new {
 
-        attr_accessor :target
+        attr_writer :fields
+        attr_accessor :target, :label_field
+        
 
         def initialize active_record_object=nil
           self.target = active_record_object || self.class::Target.new
@@ -63,6 +65,31 @@ module PopulateMe
           "#{Utils.dasherize_class_name(self.class.name)}/#{@target.id}".sub(/\/$/,'')
         end
 
+
+        def self.create_fields active_record_object
+          active_record_object.reject{|k,v| k == "id"}.as_json
+        end
+
+        def self.fields 
+          @fields ||= create_fields(self::Target.columns_hash)
+        end
+
+        # def field name, attributes={}
+        #   if attributes[:type]==:list
+        #     define_method(name) do
+        #       var = "@#{name}"
+        #       instance_variable_set(var, instance_variable_get(var)||[])
+        #     end
+        #   else
+        #     attr_accessor name
+        #   end
+        #   self.fields[name] = attributes
+        # end
+
+        # def label_field
+        #   @label_field || self.fields.keys[0]
+        # end
+
         def to_admin_form o={}
           input_name_prefix = o[:input_name_prefix]||'data'
           items = [{
@@ -77,8 +104,8 @@ module PopulateMe
               value: self.class.name
             }
           }]
-          if self.class.respond_to? :columns_hash
-            self.class.columns_hash.each do |k,v|
+          if self.class.respond_to? :fields
+            self.class.fields.each do |k,v|
               unless v[:form_field]==false
                 settings = v.dup
                 settings[:field_name] = k
