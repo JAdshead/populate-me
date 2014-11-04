@@ -656,5 +656,103 @@ describe 'PopulateMe::Document' do
 
   end
 
+  describe 'Schema' do
+
+    class SchemalessAddressBook
+      include PopulateMe::Document
+      attr_accessor :title
+      def contacts; @contacts ||= []; end
+    end
+
+    it 'Is not mandatory' do
+      SchemalessAddressBook.label_field.should==nil
+      SchemalessAddressBook.fields.should=={}
+    end
+
+    class AddressBook
+      include PopulateMe::Document
+      field :title, foo: :bar
+      field :contacts, type: :list, class: :'AddressBook::Contact'
+    end
+
+    class AddressBook::Contact
+      include PopulateMe::Document
+      field :first_name
+      field :last_name
+    end
+
+    it 'Saves fields in the class schema along with any options passed to it' do
+      AddressBook.fields.should=={title: {foo: :bar}, contacts: {type: :list, class: :'AddressBook::Contact'}}
+    end
+
+    it 'Creates accessor methods for fields' do
+      ab = AddressBook.new
+      ab.title = 'My Friends'
+      ab.title.should=='My Friends'
+    end
+
+    it 'The reader for fields of type :list default to an empty array' do
+      ab = AddressBook.new
+      ab.contacts.should==[]
+    end
+
+    it 'Sets the label_field to whatever the first field is by default' do
+      AddressBook.label_field.should==:title
+      ab = AddressBook.new title: "My Friends"
+      ab.to_s.should=='My Friends'
+    end
+
+  end
+
+  describe 'Admin related methods' do
+
+    class SuperHeroTeam
+      include PopulateMe::Document
+      field :name
+      field :members, type: :list, class: :'SuperHeroTeam::Member'
+    end
+
+    class SuperHeroTeam::Member
+      include PopulateMe::Document
+    end
+
+    it 'Can give a url to instances' do
+      SuperHeroTeam::Member.new.to_admin_url.should=='super-hero-team--member'
+      SuperHeroTeam::Member.new(id: 'x-men').to_admin_url.should=='super-hero-team--member/x-men'
+    end
+
+    it 'Can send the relevant list item default info for an instance' do
+      team = SuperHeroTeam.new id: 'x-men', name: 'X Men'
+      info = team.to_admin_list_item
+      [:class_name,:id,:admin_url,:title].all?{|i| info.keys.include?(i)}.should==true
+    end
+
+    it 'Can send the relevant list default info for a class' do
+      info = SuperHeroTeam.to_admin_list
+      [:template,:page_title,:dasherized_class_name,:items].all?{|i| info.keys.include?(i)}.should==true
+      info[:template].should=='template_list'
+      info[:items].should==[]
+      team = SuperHeroTeam.new id: 'x-men', name: 'X Men'
+      team.save
+      info = SuperHeroTeam.to_admin_list
+      info[:items].include?(team.to_admin_list_item)
+    end
+
+    it 'Can send the relevant form default info for an instance' do
+      team = SuperHeroTeam.new
+      info = team.to_admin_form
+      existing_team = SuperHeroTeam['x-men']
+      existing_team_info = existing_team.to_admin_form
+      [:template,:page_title,:admin_url,:is_new,:fields].all?{|i| info.keys.include?(i)}.should==true
+      info[:template].should=='template_form'
+      info[:page_title].should=='New Super Hero Team'
+      existing_team_info[:page_title].should=='X Men'
+      info[:is_new].should==true
+      existing_team_info[:is_new].should==false
+      info[:fields].size.should==(SuperHeroTeam.fields.size+1)
+    end
+
+  end
+
 end
 
