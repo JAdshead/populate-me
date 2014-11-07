@@ -117,11 +117,11 @@ module PopulateMe
                   unless settings[:class].nil?
                     settings[:dasherized_class_name] = PopulateMe::Utils.dasherize_class_name(settings[:class].to_s)
                   end
-                  settings[:items] = self.__send__(k).map {|embeded|
+                  settings[:items] = @target.__send__(k).map {|embeded|
                    embeded.to_admin_form(o.merge(input_name_prefix: settings[:input_name]+'[]'))
                   }
                 else
-                  settings[:input_value] = self.__send__ k
+                  settings[:input_value] = @target.__send__ k
                   settings[:input_attributes] = {
                     type: 'text', name: settings[:input_name],
                     value: settings[:input_value], required: settings[:required]
@@ -139,6 +139,66 @@ module PopulateMe
             fields: items
           }
         end
+
+
+        def to_h
+          persistent_instance_variables.inject({'_class'=>self::Target.name}) do |h,var|
+            k = var.to_s[1..-1]
+            v = instance_variable_get var
+            if v.is_a? Array
+              h[k] = v.map(&:to_h)
+            else
+              h[k] = v
+            end
+            h
+          end
+        end
+        alias_method :to_hash, :to_h
+
+
+        def set_from_hash hash, o={}
+          raise(TypeError, "#{hash} is not a Hash") unless hash.is_a? Hash
+          hash = hash.dup # Leave original untouched
+          hash.delete('_class')
+          hash.each do |k,v|
+            if v.is_a? Array
+              __send__(k.to_sym).clear
+              v.each do |d|
+                obj =  Utils.resolve_class_name(d['_class']).new.set_from_hash(d)
+                __send__(k.to_sym) << obj
+              end
+            else
+              v = Utils.automatic_typecast(v) if o[:typecast]
+              set k.to_sym => v
+            end
+          end
+          self
+        end
+
+        def set attributes
+          attributes.dup.each do |k,v| 
+            @target.__send__ "#{k}=", v
+          end
+          self
+        end
+
+        def persistent_instance_variables
+          @target.instance_variables.select{|k| k !~ /^@_/ }
+        end
+
+        def valid?
+          @target.valid?
+        end
+
+
+        def save
+          @target.save
+        end
+
+        def delete
+          @target.delete
+        end
+
       }
       base::Proxy.const_set :Target, base
     end

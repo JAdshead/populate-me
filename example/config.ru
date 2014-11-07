@@ -14,14 +14,9 @@ ActiveRecord::Base.establish_connection(
   :database => 'populate_me_test'
 )
 
-
 class BlogPost < ActiveRecord::Base
   include PopulateMe::ActiveRecordProxy
-  
 end
-
-
-
 
 # require 'populate_me/document'
 # class BlogPost
