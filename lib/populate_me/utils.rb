@@ -38,6 +38,35 @@ module PopulateMe
     end
     module_function :resolve_dasherized_class_name
 
+    def guess_related_class_name context, clue
+      context.respond_to?(:name) ? context.name : context.to_s
+      clue = clue.to_s
+      return clue if clue=~/^[A-Z]/
+      if clue=~/^[a-z]/
+        clue = undasherize_class_name clue.sub(/s$/,'').gsub('_','-')
+        clue = "::#{clue}"
+      end
+      "#{context}#{clue}"
+    end
+    module_function :guess_related_class_name
+
+    def get_value raw, context=Kernel
+      if raw.is_a? Proc
+        raw.call
+      elsif raw.is_a? Symbol
+        context.__send__ raw
+      else
+        raw
+      end
+    end
+    module_function :get_value
+
+    def ensure_key h, k, v
+      h[k] = v unless h.key?(k)
+      h[k]
+    end
+    module_function :ensure_key
+
     ACCENTS_FROM = 
       "ÀÁÂÃÄÅàáâãäåĀāĂăĄąÇçĆćĈĉĊċČčÐðĎďĐđÈÉÊËèéêëĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħÌÍÎÏìíîïĨĩĪīĬĭĮįİıĴĵĶķĸĹĺĻļĽľĿŀŁłÑñŃńŅņŇňŉŊŋÒÓÔÕÖØòóôõöøŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞ"
     ACCENTS_TO = 
@@ -95,10 +124,24 @@ module PopulateMe
     end
     module_function :nl2br
 
+    def complete_link link
+      if link =~ /^(\/|[a-z]*:)/
+        link
+      else
+        "//#{link}"
+      end
+    end
+    module_function :complete_link
+
+    def external_link? link
+      !!(link =~ /^[a-z]*:?\/\//)
+    end
+    module_function :external_link?
+
     def automatic_html s, br='<br>'
       replaced = s.to_s.
       gsub(/\b((https?:\/\/|ftps?:\/\/|www\.)([A-Za-z0-9\-_=%&@\?\.\/]+))\b/) do |str|
-        url = $2=="www." ? "http://#{$1}" : $1
+        url = complete_link $1
         "<a href='#{url}' target='_blank'>#{$1}</a>"
       end.
       gsub(/([^\s]+@[^\s]*[a-zA-Z])/) do |str|

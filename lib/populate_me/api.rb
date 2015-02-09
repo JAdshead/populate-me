@@ -30,11 +30,24 @@ class PopulateMe::API < Sinatra::Base
     if model_instance.valid?
       model_instance.save
       status 201
-      {'success'=>true,'message'=>'Created Successfully','data'=>model_instance.to_h}.to_json
+      {
+        'success'=>true,'message'=>'Created Successfully',
+        'data'=>model_instance.to_h
+      }.to_json
     else
       status 400
-      {'success'=>false,'message'=>'Invalid Document'}.to_json
+      {
+        'success'=>false,'message'=>'Invalid Document',
+        'data'=>model_instance.error_report
+      }.to_json
     end
+  end
+
+  put '/:model' do
+    pass unless params[:action]=='sort'
+    model_class = resolve_model_class params[:model]
+    model_class.set_indexes(params[:field].to_sym,params[:ids])
+    {'success'=>true,'message'=>'Sorted Successfully'}.to_json
   end
 
   get '/:model/:id' do
@@ -49,10 +62,16 @@ class PopulateMe::API < Sinatra::Base
     model_instance.set_from_hash params[:data], typecast: true
     if model_instance.valid?
       model_instance.save
-      {'success'=>true,'message'=>'Updated Successfully','data'=>model_instance.to_h}.to_json
+      {
+        'success'=>true,'message'=>'Updated Successfully',
+        'data'=>model_instance.to_h
+      }.to_json
     else
       status 400
-      {'success'=>false,'message'=>'Invalid Document'}.to_json
+      {
+        'success'=>false,'message'=>'Invalid Document',
+        'data'=>model_instance.error_report
+      }.to_json
     end
   end
 
@@ -81,12 +100,12 @@ class PopulateMe::API < Sinatra::Base
 
     def resolve_model_class name
       model_class = resolve_dasherized_class_name(name) rescue nil
-      halt(404) unless model_class.respond_to?(:[])
+      halt(404) unless model_class.respond_to?(:admin_get)
       model_class
     end
 
     def resolve_model_instance model_class, id
-      instance = model_class[id]
+      instance = model_class.admin_get id
       halt(404) if instance.nil?
       instance
     end

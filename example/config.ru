@@ -1,9 +1,5 @@
 $:.unshift File.expand_path('../../lib', __FILE__)
 require 'populate_me'
-
-
-# Models ##########
-
 require 'pg'
 require 'active_record'
 require 'populate_me/active_record_proxy'
@@ -16,7 +12,18 @@ ActiveRecord::Base.establish_connection(
 
 class BlogPost < ActiveRecord::Base
   include PopulateMe::ActiveRecordProxy
+
+  field :title, required: true
+  field :content, type: :text
+  field :authors, type: :list
+  field :published, type: :boolean
+  relationship :comments
+  def validate
+    error_on(:content,'Cannot be blank') if PopulateMe::Utils.blank?(self.content)
+  end
 end
+
+
 
 # require 'populate_me/document'
 # class BlogPost

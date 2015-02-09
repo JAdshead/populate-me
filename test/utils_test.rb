@@ -87,6 +87,49 @@ describe 'PopulateMe::Utils' do
     end
   end
 
+  describe '#guess_related_class_name' do
+  
+    it 'Should return the class_name as-is if it looks like a complete one' do
+      PopulateMe::Utils.guess_related_class_name(PopulateMe::Utils, 'Class::Given').should=='Class::Given'
+      PopulateMe::Utils.guess_related_class_name('PopulateMe::Utils', :'Class::Given').should=='Class::Given'
+    end
+
+    it 'Should prepend the class_name whith the context if class_name starts with ::' do
+      PopulateMe::Utils.guess_related_class_name(PopulateMe::Utils, '::RelatedThing').should=='PopulateMe::Utils::RelatedThing'
+      PopulateMe::Utils.guess_related_class_name('PopulateMe::Utils', :'::RelatedThing').should=='PopulateMe::Utils::RelatedThing'
+    end
+
+    it 'Should guess a singular class_name in the context when the class_name starts with a lowercase letter' do
+      PopulateMe::Utils.guess_related_class_name(PopulateMe::Utils, :related_things).should=='PopulateMe::Utils::RelatedThing'
+      PopulateMe::Utils.guess_related_class_name('PopulateMe::Utils', 'related_things').should=='PopulateMe::Utils::RelatedThing'
+      PopulateMe::Utils.guess_related_class_name(PopulateMe::Utils, :related_thing).should=='PopulateMe::Utils::RelatedThing'
+      PopulateMe::Utils.guess_related_class_name('PopulateMe::Utils', 'related_thing').should=='PopulateMe::Utils::RelatedThing'
+    end
+
+  end
+
+  describe '#get_value' do
+
+    it 'Can get the value of anything it can' do
+      PopulateMe::Utils.get_value('Hello').should=='Hello'
+      PopulateMe::Utils.get_value(proc{'Hello'}).should=='Hello'
+      PopulateMe::Utils.get_value(:capitalize,'hello').should=='Hello'
+    end
+
+  end
+
+  describe '#ensure_key' do
+
+    it 'Sets the key if the key did not exist' do
+      h = {a: 3}
+      PopulateMe::Utils.ensure_key(h,:a,4).should==3
+      h[:a].should==3
+      PopulateMe::Utils.ensure_key(h,:b,4).should==4
+      h[:b].should==4
+    end
+
+  end
+
   describe '#slugify' do
 
     # For making slug for a document
@@ -196,10 +239,51 @@ describe 'PopulateMe::Utils' do
     end
   end
 
+  describe '#complete_link' do
+
+    it 'Adds the external double slash when missing' do
+      cases = [
+        ['www.populate-me.com','//www.populate-me.com'],
+        ['populate-me.com','//populate-me.com'],
+        ['please.populate-me.com','//please.populate-me.com'],
+        ['//www.populate-me.com','//www.populate-me.com'],
+        ['://www.populate-me.com','://www.populate-me.com'],
+        ['http://www.populate-me.com','http://www.populate-me.com'],
+        ['ftp://www.populate-me.com','ftp://www.populate-me.com'],
+        ['mailto:populate&#64;me.com','mailto:populate&#64;me.com']
+      ]
+      cases.each do |c|
+        PopulateMe::Utils.complete_link(c[0]).should==c[1]
+      end
+    end
+
+  end
+
+  describe '#external_link?' do
+
+    it 'Returns true when the link would need target blank' do
+      cases = [
+        ['http://populate-me.com', true],
+        ['https://populate-me.com', true],
+        ['ftp://populate-me.com', true],
+        ['://populate-me.com', true],
+        ['//populate-me.com', true],
+        ['mailto:user@populate-me.com', false],
+        ['mailto:user&#64;populate-me.com', false],
+        ['/populate/me', false],
+        ['populate-me.html', false],
+      ]
+      cases.each do |c|
+        PopulateMe::Utils.external_link?(c[0]).should==c[1]
+      end
+    end
+
+  end
+
   describe '#automatic_html' do
     it 'Works properly' do
       input = "Hello\nme@site.co.uk\nNot the begining me@site.co.uk\nme@site.co.uk not the end\nwww.site.co.uk\nVisit www.site.co.uk\nwww.site.co.uk rules\nhttp://www.site.co.uk\nVisit http://www.site.co.uk\nhttp://www.site.co.uk rules"
-      output = "Hello<br><a href='mailto:me&#64;site.co.uk'>me&#64;site.co.uk</a><br>Not the begining <a href='mailto:me&#64;site.co.uk'>me&#64;site.co.uk</a><br><a href='mailto:me&#64;site.co.uk'>me&#64;site.co.uk</a> not the end<br><a href='http://www.site.co.uk' target='_blank'>www.site.co.uk</a><br>Visit <a href='http://www.site.co.uk' target='_blank'>www.site.co.uk</a><br><a href='http://www.site.co.uk' target='_blank'>www.site.co.uk</a> rules<br><a href='http://www.site.co.uk' target='_blank'>http://www.site.co.uk</a><br>Visit <a href='http://www.site.co.uk' target='_blank'>http://www.site.co.uk</a><br><a href='http://www.site.co.uk' target='_blank'>http://www.site.co.uk</a> rules"
+      output = "Hello<br><a href='mailto:me&#64;site.co.uk'>me&#64;site.co.uk</a><br>Not the begining <a href='mailto:me&#64;site.co.uk'>me&#64;site.co.uk</a><br><a href='mailto:me&#64;site.co.uk'>me&#64;site.co.uk</a> not the end<br><a href='//www.site.co.uk' target='_blank'>www.site.co.uk</a><br>Visit <a href='//www.site.co.uk' target='_blank'>www.site.co.uk</a><br><a href='//www.site.co.uk' target='_blank'>www.site.co.uk</a> rules<br><a href='http://www.site.co.uk' target='_blank'>http://www.site.co.uk</a><br>Visit <a href='http://www.site.co.uk' target='_blank'>http://www.site.co.uk</a><br><a href='http://www.site.co.uk' target='_blank'>http://www.site.co.uk</a> rules"
       PopulateMe::Utils.automatic_html(input).should==output
     end
   end

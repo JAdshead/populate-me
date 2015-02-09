@@ -31,17 +31,25 @@
         {{page_title}}
       </h1>
       <p class='new-document-btn-wrap'>
-        <a href="<%= request.script_name %>/form/{{dasherized_class_name}}" class='column-push new-document-btn'>+</a>
+        <a href="<%= request.script_name %>/form/{{dasherized_class_name}}{{#new_data}}?{{new_data}}{{/new_data}}" class='column-push new-document-btn'>+</a>
       </p>
-      <ol class='documents'>
+      <ol class='documents' data-sort-field='{{sort_field}}' data-sort-url='<%= request.script_name %>/api/{{dasherized_class_name}}'>
         {{#items}}{{#custom_partial_or_default}}template_document{{/custom_partial_or_default}}{{/items}}
       </ol>
     </script>
 
     <script id="template-document" type="x-tmpl-mustache">
-      <li class='admin-list-item {{class_name}}-{{id}}'>
+      <li class='admin-list-item' data-id='{{id}}'>
+        {{#sort_field}}
+          <span class='handle' title='Drag and drop'>&#8597;</span> 
+        {{/sort_field}}
         <a href="<%= request.script_name %>/form/{{admin_url}}" class='column-push'>{{title}}</a>
-        <button type='button' class='admin-delete' value='<%= request.script_name %>/api/{{admin_url}}'>x</button>
+        <button type='button' class='admin-delete' title='Delete' value='<%= request.script_name %>/api/{{admin_url}}'>&times;</button>
+        <ol class='local-menu'>
+          {{#local_menu}}
+            <li><a href="{{href}}" class='column-push'>{{title}}</a></li>
+          {{/local_menu}}
+        </ol>
       </li>
     </script>
 
@@ -56,8 +64,11 @@
       </form>
     </script>
 
-    <script id="template-embeded-form" type="x-tmpl-mustache">
+    <script id="template-nested-form" type="x-tmpl-mustache">
       <li>
+        <header>
+          <span class='handle' title='Drag and drop'>&#8597;</span><button type='button' class='admin-delete-nested' title='Delete'>&times;</button>
+        </header>
         {{#custom_partial_or_default}}template_form_fields{{/custom_partial_or_default}}
       </li>
     </script>
@@ -70,7 +81,7 @@
 
     <script id="template-form-field" type="x-tmpl-mustache">
       {{#wrap}}
-        <div class='field'>
+        <div class='field' data-field-name='{{field_name}}'>
           <label>{{label}}</label>
           <br>
           {{#adapted_field}}{{/adapted_field}}
@@ -82,29 +93,39 @@
     </script>
     
     <script id="template-string-field" type="x-tmpl-mustache">
-      <input{{build_input_attributes}} />
+      <input name='{{input_name}}' value='{{input_value}}' {{#required}}required{{/required}}{{{build_input_attributes}}} />
     </script>
 
     <script id="template-text-field" type="x-tmpl-mustache">
-      <textarea name='{{input_name}}' {{#required}}required='{{required}}'{{/required}}>{{input_value}}</textarea>
+      <textarea name='{{input_name}}' {{#required}}required{{/required}}{{{build_input_attributes}}}>{{input_value}}</textarea>
     </script>
 
     <script id="template-boolean-field" type="x-tmpl-mustache">
-      <input type='hidden' name='{{input_name}}' value='false'/>
-      <input type='checkbox' name='{{input_name}}' value='true' {{#input_value}}checked='{{input_value}}'{{/input_value}} />
+      <select name='{{input_name}}' {{{build_input_attributes}}}>
+        <option value='false' {{^input_value}}selected{{/input_value}}>No</option>
+        <option value='true' {{#input_value}}selected{{/input_value}}>Yes</option>
+      </select>
+    </script>
+
+    <script id="template-select-field" type="x-tmpl-mustache">
+      <select name='{{input_name}}' {{#multiple}}multiple{{/multiple}}{{{build_input_attributes}}}>
+        {{#select_options}}
+          <option value='{{value}}' {{#selected}}selected{{/selected}}>{{description}}</option>
+        {{/select_options}}
+      </select>
     </script>
 
     <script id="template-list-field" type="x-tmpl-mustache">
-      <fieldset>
+      <fieldset class='field' data-field-name='{{field_name}}'>
         <legend>{{label}}</legend>
         {{#dasherized_class_name}}
           <p>
-          <a href="<%= request.script_name %>/form/{{dasherized_class_name}}?input_name_prefix={{input_name}}[]&embeded=true" class='new-embeded-document-btn'>+</a>
+          <a href="<%= request.script_name %>/form/{{dasherized_class_name}}?input_name_prefix={{input_name}}[]&nested=true" class='new-nested-document-btn'>+</a>
           </p>
         {{/dasherized_class_name}}
-        <ol class='embeded-documents'>
+        <ol class='nested-documents'>
           {{#items}}
-            {{>template_embeded_form}}
+            {{>template_nested_form}}
           {{/items}}
         </ol>
       </fieldset>

@@ -4,10 +4,10 @@ $:.unshift File.expand_path('../../lib', __FILE__)
 require 'populate_me/document'
 class Band
   include PopulateMe::Document
-  attr_accessor :name, :awsome
+  attr_accessor :name, :awsome, :position
   def members; @members ||= []; end
   def validate
-    error_on(:name,"WFT") if self.name=='ZZ Top'
+    error_on(:name,"WTF") if self.name=='ZZ Top'
   end
 end
 class Band::Member
@@ -30,7 +30,7 @@ describe 'PopulateMe::API' do
   # managing documents through a JSON-based API
   #
   # The API needs the Document class to implement these methods:
-  # - Class.[]
+  # - Class.admin_get
   #   - Needs to be able to accept the ID as a string
   #   - The class is responsible for conversion
   #   - So a mix of different classes of IDs is not possible
@@ -54,6 +54,15 @@ describe 'PopulateMe::API' do
     res.status.should==201
     json['success'].should==true
     json['message'].should=='Created Successfully'
+    json
+  end
+
+  def successful_sorting(res)
+    json = JSON.parse(res.body)
+    res.content_type.should=='application/json'
+    res.status.should==200
+    json['success'].should==true
+    json['message'].should=='Sorted Successfully'
     json
   end
 
@@ -108,7 +117,7 @@ describe 'PopulateMe::API' do
     it 'Creates successfully' do
       res = API.post('/band', {params: {data: {id: '4', name: 'Neurosis'}}})
       json = successful_creation(res)
-      json['data'].should==Band['4'].to_h
+      json['data'].should==Band.admin_get('4').to_h
     end
 
     it 'Typecasts before creating' do
@@ -127,7 +136,8 @@ describe 'PopulateMe::API' do
     it 'Fails if the doc is invalid' do
       count = Band.documents.size
       res = API.post('/band', {params: {data: {name: 'ZZ Top'}}})
-      invalid_instance(res)
+      json = invalid_instance(res)
+      json['data'].should=={'name'=>['WTF']}
       Band.documents.size.should==count
     end
 
@@ -135,6 +145,40 @@ describe 'PopulateMe::API' do
       res = API.post '/band', {params: {'_destination'=>'http://example.org/anywhere'}}
       res.status.should==302
       res.header['Location'].should=='http://example.org/anywhere'
+    end
+
+  end
+
+  describe 'PUT /:model' do
+
+    it 'Can set indexes for sorting' do
+      res = API.put '/band', {
+        params: {
+          'action'=>'sort',
+          'field'=>'position',
+          'ids'=> ['2','3','1']
+        }
+      }
+      json = successful_sorting(res)
+      Band.admin_get('2').position.should==0
+      Band.admin_get('3').position.should==1
+      Band.admin_get('1').position.should==2
+    end
+
+    it 'Redirects after sorting if destination is given' do
+      res = API.put '/band', {
+        params: {
+          'action'=>'sort',
+          'field'=>'position',
+          'ids'=> ['3','2','1'],
+          '_destination'=>'http://example.org/anywhere'
+        }
+      }
+      res.status.should==302
+      res.header['Location'].should=='http://example.org/anywhere'
+      Band.admin_get('3').position.should==0
+      Band.admin_get('2').position.should==1
+      Band.admin_get('1').position.should==2
     end
 
   end
@@ -163,7 +207,7 @@ describe 'PopulateMe::API' do
     it 'Sends the instance if it exists' do
       res = API.get('/band/2')
       json = successful_instance(res)
-      json['data'].should==Band['2'].to_h
+      json['data'].should==Band.admin_get('2').to_h
     end
   end
 
@@ -174,25 +218,26 @@ describe 'PopulateMe::API' do
     end
     it 'Fails if the document is invalid' do
       res = API.put('/band/2', {params: {data: {name: 'ZZ Top'}}})
-      invalid_instance(res)
-      Band['2'].name.should!='ZZ Top'
+      json = invalid_instance(res)
+      json['data'].should=={'name'=>['WTF']}
+      Band.admin_get('2').name.should!='ZZ Top'
     end
     it 'Updates documents' do
       res = API.put('/band/3', {params: {data: {awsome: 'yes'}}})
       successful_update(res)
       res = API.put('/band/3', {params: {data: {name: 'The Ramones'}}})
       successful_update(res)
-      obj = Band['3']
+      obj = Band.admin_get('3')
       obj.awsome.should=='yes'
       obj.name.should=='The Ramones'
       obj.members.size.should==2
       obj.members[0].name.should=='Joey'
     end
-    # it 'Updates embeded documents' do
-    #   obj = Band['3']
+    # it 'Updates nested documents' do
+    #   obj = Band.admin_get('3')
     #   res = API.put('/band/3', {params: {data: {members: [{id: obj.members[0].id, name: 'Joey Ramone'}]}}})
     #   successful_update(res)
-    #   obj = Band['3']
+    #   obj = Band.admin_get('3')
     #   obj.awsome.should=='yes'
     #   obj.name.should=='The Ramones'
     #   obj.members.size.should==2
@@ -207,7 +252,7 @@ describe 'PopulateMe::API' do
       should_not_found(res)
     end
     it 'Returns a deletion response when the instance exists' do
-      obj = Band['1']
+      obj = Band.admin_get('1')
       res = API.delete('/band/1')
       json = successful_deletion(res)
       json['data'].should==obj.to_h
